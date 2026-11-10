@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#090b12">
+<title>Rebaixados Brasil 3D — Protótipo</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#090b12;color:#fff;font-family:system-ui,-apple-system,Segoe UI,sans-serif;touch-action:none}
+#game{position:fixed;inset:0}canvas{display:block}
+.hud{position:fixed;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;padding:14px}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.brand{background:#101522dd;border:1px solid #ffffff20;border-radius:14px;padding:10px 13px;backdrop-filter:blur(8px)}
+.brand b{display:block;letter-spacing:.08em;color:#62f0d0;font-size:13px}.brand small{color:#c5cad5;font-size:11px}
+.stats{background:#101522dd;border:1px solid #ffffff20;border-radius:14px;padding:9px 12px;text-align:right;font-size:12px}
+.stats strong{color:#62f0d0;font-size:17px}
+.bottom{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.controls{display:flex;gap:9px;align-items:flex-end;pointer-events:auto}
+.cluster{display:flex;gap:8px;align-items:flex-end}
+button{border:1px solid #ffffff35;background:#121a2acc;color:#fff;border-radius:16px;min-width:62px;height:62px;font-weight:800;font-size:12px;box-shadow:0 5px 18px #0008;touch-action:none}
+button:active,button.active{background:#5b2cff;border-color:#b5a0ff;transform:scale(.97)}
+button.action{height:48px;min-width:76px;border-radius:13px;background:#092c2acc;color:#7fffe0}
+#gas{height:76px;min-width:76px;background:#0b654fdd}#brake{height:62px;background:#65252ddd}
+.hint{position:fixed;left:50%;top:83px;transform:translateX(-50%);background:#101522cc;border:1px solid #ffffff22;padding:8px 12px;border-radius:12px;font-size:12px;color:#e5e7eb;text-align:center;max-width:90%;pointer-events:none}
+#message{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#0d1322ee;border:1px solid #62f0d0;border-radius:18px;padding:17px 20px;text-align:center;max-width:85%;display:none;pointer-events:none}
+@media(min-width:700px){.hud{padding:22px}.hint{top:100px}.brand b{font-size:16px}}
+</style>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}
+</script>
+</head>
+<body>
+<div id="game"></div>
+<div class="hud">
+ <div class="top">
+  <div class="brand"><b>REBAIXADOS BRASIL 3D</b><small>PROTÓTIPO • GARAGEM</small></div>
+  <div class="stats">SALDO<br><strong>R$ 5.000</strong><br><small id="speed">0 km/h</small></div>
+ </div>
+ <div class="bottom">
+  <div class="controls">
+   <div class="cluster"><button id="left">◀<br>VIRAR</button><button id="right">▶<br>VIRAR</button></div>
+   <div class="cluster"><button id="susp" class="action">⬆ SUSP.</button><button id="sound" class="action">🔊 SOM</button></div>
+  </div>
+  <div class="controls"><button id="brake">FREIO</button><button id="gas">ACELERAR</button></div>
+ </div>
+</div>
+<div class="hint">Segure ACELERAR para andar • use ◀ ▶ para virar • toque em SUSP. para levantar o carro</div>
+<div id="message">🔊 Som automotivo ativado</div>
+<script type="module">
+import * as THREE from 'three';
+const root=document.querySelector('#game');
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x090d18); scene.fog=new THREE.Fog(0x090d18,22,75);
+const camera=new THREE.PerspectiveCamera(58,innerWidth/innerHeight,.1,150);
+camera.position.set(7,6,10);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.7)); renderer.setSize(innerWidth,innerHeight); renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.15; root.appendChild(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xb9d5ff,0x20202b,2.0));
+const key=new THREE.DirectionalLight(0xffffff,3); key.position.set(-5,10,7); key.castShadow=true; scene.add(key);
+const fill=new THREE.PointLight(0x6c39ff,22,24); fill.position.set(5,4,-5); scene.add(fill);
+const teal=new THREE.PointLight(0x28e8c0,15,20); teal.position.set(-7,3,1); scene.add(teal);
+const mat=(color,metalness=0,roughness=.55)=>new THREE.MeshStandardMaterial({color,metalness,roughness});
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(100,100),mat(0x171b27,.1,.8));floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
+const grid=new THREE.GridHelper(100,50,0x354052,0x252d3c);grid.position.y=.012;scene.add(grid);
+// Garage architecture
+function box(w,h,d,x,y,z,m){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;scene.add(o);return o}
+box(24,.35,1,0,5,-9,mat(0x242a3b));box(.35,10,18,-12,0,-1,mat(0x202637));box(.35,10,18,12,0,-1,mat(0x202637));
+for(let i=-9;i<=9;i+=3){box(.06,4,.06,i,2,-8,mat(0x5b2cff));}
+const sign=box(8,1.1,.18,0,4.3,-8.35,mat(0x101827,.2,.25));
+const glow=new THREE.PointLight(0x5b2cff,18,15);glow.position.set(0,4,-7);scene.add(glow);
+// Car group, front points toward -Z
+const car=new THREE.Group();scene.add(car);
+const bodyMat=mat(0x9d1028,.65,.28), dark=mat(0x10131c,.2,.35), glass= new THREE.MeshStandardMaterial({color:0x14283a,metalness:.35,roughness:.15}), chrome=mat(0xbac4d2,.8,.22), red=mat(0xff243e,.25,.25);
+function part(parent,w,h,d,x,y,z,m){let o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o}
+part(car,2.05,.48,4.15,0,.83,0,bodyMat);
+part(car,1.78,.82,2.05,0,1.43,.22,bodyMat);
+part(car,1.62,.64,1.86,0,1.48,.18,glass);
+part(car,1.9,.12,1.1,0,1.91,.25,bodyMat);
+part(car,1.9,.1,.15,0,1.92,-.72,dark);
+part(car,1.78,.08,.16,0,1.16,-2.09,dark);
+part(car,1.65,.14,.18,0,.69,-2.1,chrome);
+part(car,.38,.18,.08,-.68,1.02,-2.1,mat(0xf7f2dc));
+part(car,.38,.18,.08,.68,1.02,-2.1,mat(0xf7f2dc));
+part(car,.34,.16,.08,-.7,1.02,2.1,red);part(car,.34,.16,.08,.7,1.02,2.1,red);
+// trunk audio wall with visible subwoofers
+part(car,1.35,.68,.12,0,1.34,1.25,dark);
+for(let x of [-.42,.42]){let woofer=new THREE.Mesh(new THREE.CylinderGeometry(.25,.25,.09,24),chrome);woofer.rotation.x=Math.PI/2;woofer.position.set(x,1.34,1.34);car.add(woofer);let cone=new THREE.Mesh(new THREE.CylinderGeometry(.18,.18,.095,24),dark);cone.rotation.x=Math.PI/2;cone.position.set(x,1.34,1.4);car.add(cone);}
+const wheels=[];
+for(let x of [-1.05,1.05])for(let z of [-1.35,1.35]){
+ const wheel=new THREE.Group();wheel.position.set(x,.48,z);car.add(wheel);
+ const tire=new THREE.Mesh(new THREE.CylinderGeometry(.43,.43,.24,32),dark);tire.rotation.z=Math.PI/2;tire.castShadow=true;wheel.add(tire);
+ const rim=new THREE.Mesh(new THREE.CylinderGeometry(.27,.27,.255,24),chrome);rim.rotation.z=Math.PI/2;wheel.add(rim);
+ const hub=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,.27,16),mat(0x5b2cff,.7,.2));hub.rotation.z=Math.PI/2;wheel.add(hub);wheels.push(wheel);
+}
+car.position.set(0,0,2.2);
+const shadow=new THREE.Mesh(new THREE.CircleGeometry(2.1,32),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.35}));shadow.rotation.x=-Math.PI/2;shadow.position.set(0,.025,2.2);scene.add(shadow);
+// decorative light strips
+for(let x of [-8,8]){const strip=new THREE.Mesh(new THREE.BoxGeometry(.08,.04,15),new THREE.MeshBasicMaterial({color:0x5b2cff}));strip.position.set(x,.08,-1);scene.add(strip)}
+const state={speed:0,steer:0,susp:false,drive:0,turn:0,brake:false};
+const el=id=>document.getElementById(id);
+function hold(id,down,up){const b=el(id);b.addEventListener('pointerdown',e=>{e.preventDefault();b.classList.add('active');down()});['pointerup','pointercancel','pointerleave'].forEach(ev=>b.addEventListener(ev,e=>{b.classList.remove('active');up()}));}
+hold('gas',()=>state.drive=1,()=>state.drive=0);hold('brake',()=>state.brake=true,()=>state.brake=false);
+hold('left',()=>state.turn=-1,()=>{if(state.turn===-1)state.turn=0});hold('right',()=>state.turn=1,()=>{if(state.turn===1)state.turn=0});
+el('susp').onclick=()=>{state.susp=!state.susp;el('susp').textContent=state.susp?'⬇ BAIXAR':'⬆ SUSP.'};
+let audio=null,osc=null,gain=null;
+el('sound').onclick=()=>{if(!audio){audio=new AudioContext();osc=audio.createOscillator();gain=audio.createGain();osc.type='sawtooth';osc.frequency.value=55;gain.gain.value=.025;osc.connect(gain).connect(audio.destination);osc.start();} if(audio.state==='suspended')audio.resume(); const on=el('sound').classList.toggle('active');gain.gain.setTargetAtTime(on ? 0.035 : 0,audio.currentTime,.08);el('message').style.display=on?'block':'none';if(on)setTimeout(()=>el('message').style.display='none',1300)};
+let last=performance.now();
+function animate(now){requestAnimationFrame(animate);let dt=Math.min((now-last)/1000,.04);last=now;
+ const target=state.drive?8:0;state.speed+=(target-state.speed)*(state.brake?dt*5:dt*1.3);if(state.brake)state.speed=Math.max(0,state.speed-dt*12);
+ car.rotation.y+=state.turn*dt*(.65+state.speed*.06);car.translateZ(-state.speed*dt*.45);
+ // keep the prototype inside the garage
+ car.position.x=THREE.MathUtils.clamp(car.position.x,-7.8,7.8);car.position.z=THREE.MathUtils.clamp(car.position.z,-5.5,6.5);
+ const ride=state.susp?.38:.0;car.position.y+=(ride-car.position.y)*dt*5;
+ wheels.forEach(w=>w.rotation.x-=state.speed*dt*1.8);
+ shadow.position.x=car.position.x;shadow.position.z=car.position.z;
+ camera.position.lerp(new THREE.Vector3(car.position.x+7,6.2,car.position.z+8),dt*1.2);camera.lookAt(car.position.x,1,car.position.z);
+ el('speed').textContent=Math.round(state.speed*12)+' km/h';
+ if(audio&&osc)osc.frequency.setTargetAtTime(55+state.speed*18,audio.currentTime,.08);
+ renderer.render(scene,camera);
+}
+requestAnimationFrame(animate);
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script>
+</body></html>
